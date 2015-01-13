@@ -76,6 +76,7 @@ instance ListLikeProcessIO a c => ProcessOutput a (ExitCode, [Chunk a]) where
     errf x = (mempty, [Stderr x])
     intf e = throw e
 
+-- | Turn a @[Chunk a]@ into any other instance of 'ProcessOutput'.
 collectOutput :: ProcessOutput a b => [Chunk a] -> b
 collectOutput xs = mconcat $ map (\ chunk -> case chunk of
                                                ProcessHandle x -> pidf x
