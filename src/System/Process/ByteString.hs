@@ -18,8 +18,15 @@ instance ListLikeProcessIO ByteString Word8 where
     readChunks h = (: []) <$> hGetContents h
 
 -- | Specialized version for backwards compatibility.
-readProcessWithExitCode :: FilePath -> [String] -> ByteString -> IO (ExitCode, ByteString, ByteString)
+readProcessWithExitCode
+    :: FilePath                              -- ^ command to run
+    -> [String]                              -- ^ any arguments
+    -> ByteString                            -- ^ standard input
+    -> IO (ExitCode, ByteString, ByteString) -- ^ exitcode, stdout, stderr
 readProcessWithExitCode = System.Process.Common.readProcessWithExitCode
 
-readCreateProcessWithExitCode :: CreateProcess -> ByteString -> IO (ExitCode, ByteString, ByteString)
+readCreateProcessWithExitCode
+    :: CreateProcess                         -- ^ command and arguments to run
+    -> ByteString                            -- ^ standard input
+    -> IO (ExitCode, ByteString, ByteString) -- ^ exitcode, stdout, stderr
 readCreateProcessWithExitCode = System.Process.Common.readCreateProcessWithExitCode

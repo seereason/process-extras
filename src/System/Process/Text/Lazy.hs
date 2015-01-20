@@ -18,8 +18,15 @@ instance ListLikeProcessIO Text Char where
     readChunks h = (map (fromChunks . (: [])) . toChunks) <$> hGetContents h
 
 -- | Specialized version for backwards compatibility.
-readProcessWithExitCode :: FilePath -> [String] -> Text -> IO (ExitCode, Text, Text)
+readProcessWithExitCode
+    :: FilePath                  -- ^ command to run
+    -> [String]                  -- ^ any arguments
+    -> Text                      -- ^ standard input
+    -> IO (ExitCode, Text, Text) -- ^ exitcode, stdout, stderr
 readProcessWithExitCode = System.Process.Common.readProcessWithExitCode
 
-readCreateProcessWithExitCode :: CreateProcess -> Text -> IO (ExitCode, Text, Text)
+readCreateProcessWithExitCode
+    :: CreateProcess             -- ^ command and arguments to run
+    -> Text                      -- ^ standard input
+    -> IO (ExitCode, Text, Text) -- ^ exitcode, stdout, stderr
 readCreateProcessWithExitCode = System.Process.Common.readCreateProcessWithExitCode
