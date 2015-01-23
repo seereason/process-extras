@@ -141,7 +141,7 @@ readInterleaved' pairs finish res = do
       takeMore openCount (Right x) =
           do xs <- unsafeInterleaveIO $ takeChunks openCount
              return (x <> xs)
-      takeChunk = takeMVar res `catch` (\ (e :: SomeException) -> return $ Right $ intf e)
+      takeChunk = takeMVar res `E.catch` (\ (e :: SomeException) -> return $ Right $ intf e)
 
 -- | Write and flush process input, closing the handle when done.
 -- Catch and ignore Resource Vanished exceptions, they just mean the
