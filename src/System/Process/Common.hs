@@ -4,7 +4,7 @@ module System.Process.Common where
 
 import Control.Applicative (pure, (<$>), (<*>))
 import Control.Concurrent
-import Control.Exception as E (SomeException, onException, catch, mask, throw)
+import Control.Exception as E (SomeException, onException, catch, mask, throw, try)
 import Control.Monad
 import Data.ListLike (null)
 import Data.ListLike.IO (ListLikeIO, hGetContents, hPutStr)
@@ -76,7 +76,7 @@ readCreateProcess p input = mask $ \restore -> do
       waitErr <- forkWait $ errf <$> (hGetContents errh >>= forceOutput)
 
       -- now write and flush any input
-      unless (null input) $ do hPutStr inh input; hFlush inh
+      unless (null input) $ do ignoreResourceVanished (hPutStr inh input); hFlush inh
       hClose inh -- done with stdin
 
       -- wait on the output
@@ -90,6 +90,13 @@ readCreateProcess p input = mask $ \restore -> do
       ex <- codef <$> waitForProcess pid
 
       return $ out <> err <> ex
+
+ignoreResourceVanished :: IO () -> IO ()
+ignoreResourceVanished action =
+    try action >>= either ignoreResourceVanished' return
+    where
+      ignoreResourceVanished' e | ioe_type e == ResourceVanished = return ()
+      ignoreResourceVanished' e = throw e
 
 -- | Like readCreateProcess, but the output is read lazily.
 readCreateProcessLazy :: (ProcessOutput a b, ListLikeProcessIO a c) => CreateProcess -> a -> IO b
