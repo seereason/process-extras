@@ -1,8 +1,15 @@
--- | Re-export all symbols and instances of the process-extras package.
+-- | Re-export all symbols and instances of the process-extras
+-- package.  Adds the Chunk type with a ProcessOutput instance, and a
+-- collectOutput function to turn a list of chunks into any instance
+-- of ProcessOutput, such as (ExitCode, String, String).  This means
+-- you can have readCreateProcess output a list of Chunk, operate on
+-- it to do progress reporting, and finally convert it to the type
+-- that readProcessWithExitCode woud have returned.
 {-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, UndecidableInstances #-}
 {-# OPTIONS_GHC -Wall -fno-warn-orphans #-}
 module System.Process.ListLike
-    ( ListLikeProcessIO(forceOutput)
+    ( ProcessMaker(process)
+    , ListLikeProcessIO(forceOutput)
     , ProcessOutput(pidf, outf, errf, codef, intf)
     , readCreateProcess
     , readCreateProcessLazy
@@ -24,8 +31,8 @@ import System.Exit (ExitCode)
 import System.Process (CmdSpec(..), CreateProcess(..), ProcessHandle, showCommandForUser)
 import System.Process.ByteString ()
 import System.Process.ByteString.Lazy ()
-import System.Process.Common (ListLikeProcessIO(forceOutput, readChunks), ProcessOutput(pidf, outf, errf, codef, intf),
-                                readCreateProcess, readCreateProcessLazy, readCreateProcessWithExitCode, readProcessWithExitCode)
+import System.Process.Common (ProcessMaker(process), ListLikeProcessIO(forceOutput, readChunks), ProcessOutput(pidf, outf, errf, codef, intf),
+                              readCreateProcess, readCreateProcessLazy, readCreateProcessWithExitCode, readProcessWithExitCode)
 import System.Process.Text ()
 import System.Process.Text.Lazy ()
 

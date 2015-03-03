@@ -1,6 +1,14 @@
 {-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, RankNTypes, ScopedTypeVariables, UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module System.Process.Common where
+module System.Process.Common
+    ( ProcessMaker(process)
+    , ListLikeProcessIO(forceOutput, readChunks)
+    , ProcessOutput(pidf, outf, errf, intf, codef)
+    , readProcessWithExitCode
+    , readCreateProcessWithExitCode
+    , readCreateProcess
+    , readCreateProcessLazy
+    ) where
 
 import Control.Applicative (pure, (<$>), (<*>))
 import Control.Concurrent
@@ -12,10 +20,31 @@ import Data.Monoid (Monoid(mempty, mappend), (<>))
 import GHC.IO.Exception (IOErrorType(ResourceVanished), IOException(ioe_type))
 import Prelude hiding (null)
 import System.Exit (ExitCode(ExitFailure))
-import System.IO (Handle, hClose, hFlush)
+import System.IO (Handle, hClose, hFlush, BufferMode, hSetBuffering)
 import System.IO.Unsafe (unsafeInterleaveIO)
-import System.Process
+import System.Process hiding (readProcessWithExitCode)
 import Utils (forkWait)
+
+class ProcessMaker a where
+    process :: a -> IO (Handle, Handle, Handle, ProcessHandle)
+
+-- | This is the usual maker argument to 'readCreateProcess'.
+instance ProcessMaker CreateProcess where
+    process p = do
+      (Just inh, Just outh, Just errh, pid) <- createProcess p { std_in = CreatePipe, std_out = CreatePipe, std_err = CreatePipe }
+      return (inh, outh, errh, pid)
+
+-- | Passing this to 'readCreateProcess' as the maker argument allows
+-- you to set the buffer mode of the process stdout and stderr handles
+-- just after the handles are created.  These are set to
+-- BlockBuffering by default, but for running console commands
+-- LineBuffering is probably what you want.
+instance ProcessMaker (CreateProcess, BufferMode, BufferMode) where
+    process (p, outmode, errmode) = do
+      (Just inh, Just outh, Just errh, pid) <- createProcess p { std_in = CreatePipe, std_out = CreatePipe, std_err = CreatePipe }
+      hSetBuffering outh outmode
+      hSetBuffering errh errmode
+      return (inh, outh, errh, pid)
 
 class Monoid b => ProcessOutput a b | b -> a where
     pidf :: ProcessHandle -> b
@@ -53,18 +82,15 @@ readProcessWithExitCode
 readProcessWithExitCode cmd args input = readCreateProcessWithExitCode (proc cmd args) input
 
 readCreateProcessWithExitCode
-    :: ListLikeProcessIO a c =>
-       CreateProcess            -- ^ command and arguments to run
-    -> a               -- ^ standard input
+    :: (ProcessMaker maker, ListLikeProcessIO a c) =>
+       maker               -- ^ command and arguments to run
+    -> a                   -- ^ standard input
     -> IO (ExitCode, a, a) -- ^ exitcode, stdout, stderr
 readCreateProcessWithExitCode = readCreateProcess
 
-readCreateProcess :: (ProcessOutput a b, ListLikeProcessIO a c) => CreateProcess -> a -> IO b
-readCreateProcess p input = mask $ \restore -> do
-    (Just inh, Just outh, Just errh, pid) <-
-        createProcess p{ std_in  = CreatePipe,
-                                       std_out = CreatePipe,
-                                       std_err = CreatePipe }
+readCreateProcess :: (ProcessMaker maker, ProcessOutput a b, ListLikeProcessIO a c) => maker -> a -> IO b
+readCreateProcess maker input = mask $ \restore -> do
+    (inh, outh, errh, pid) <- process maker
     flip onException
       (do terminateProcess pid; hClose inh; hClose outh; hClose errh;
           waitForProcess pid) $ restore $ do
@@ -99,12 +125,9 @@ ignoreResourceVanished action =
       ignoreResourceVanished' e = throw e
 
 -- | Like readCreateProcess, but the output is read lazily.
-readCreateProcessLazy :: (ProcessOutput a b, ListLikeProcessIO a c) => CreateProcess -> a -> IO b
-readCreateProcessLazy p input = mask $ \restore -> do
-    (Just inh, Just outh, Just errh, pid) <-
-        createProcess p{ std_in  = CreatePipe,
-                                       std_out = CreatePipe,
-                                       std_err = CreatePipe }
+readCreateProcessLazy :: (ProcessMaker maker, ProcessOutput a b, ListLikeProcessIO a c) => maker -> a -> IO b
+readCreateProcessLazy maker input = mask $ \restore -> do
+    (inh, outh, errh, pid) <- process maker
     onException
       (restore $
        do -- fork off a thread to start consuming stdout
