@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, RankNTypes, ScopedTypeVariables, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, RankNTypes, ScopedTypeVariables, TemplateHaskell, UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.Common
     ( ProcessMaker(process)
@@ -12,6 +12,7 @@ module System.Process.Common
 
 import Control.Applicative (pure, (<$>), (<*>))
 import Control.Concurrent
+import Control.DeepSeq (NFData)
 import Control.Exception as E (SomeException, onException, catch, mask, throw, try)
 import Control.Monad
 import Data.ListLike (null)
@@ -23,7 +24,10 @@ import System.Exit (ExitCode(ExitFailure))
 import System.IO (Handle, hClose, hFlush, BufferMode, hSetBuffering)
 import System.IO.Unsafe (unsafeInterleaveIO)
 import System.Process hiding (readProcessWithExitCode)
-import Utils (forkWait)
+import Utils (forkWait, missingInstances, simpleMissingInstanceTest)
+
+-- | This instance lets us use DeepSeq's force'function on a stream of Chunks.
+$(missingInstances simpleMissingInstanceTest [d|instance NFData ExitCode|])
 
 class ProcessMaker a where
     process :: a -> IO (Handle, Handle, Handle, ProcessHandle)

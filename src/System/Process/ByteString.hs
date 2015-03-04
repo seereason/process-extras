@@ -1,8 +1,9 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.ByteString where
 
 import Control.Applicative ((<$>))
+import Control.DeepSeq (NFData)
 import Control.Monad
 import Data.ByteString (ByteString)
 import Data.ListLike.IO (hGetContents)
@@ -11,6 +12,9 @@ import Prelude hiding (null)
 import System.Process
 import System.Process.Common
 import System.Exit (ExitCode)
+import Utils (missingInstances, simpleMissingInstanceTest)
+
+$(missingInstances simpleMissingInstanceTest [d|instance NFData ByteString|])
 
 -- | Like 'System.Process.readProcessWithExitCode', but using 'ByteString'
 instance ListLikeProcessIO ByteString Word8 where
