@@ -4,7 +4,7 @@ module Utils where
 import Control.Concurrent
 import Control.Exception
 import Data.Maybe (catMaybes)
-import Language.Haskell.TH (InstanceDec, Dec(InstanceD), Type(ConT, AppT), pprint, Q, reifyInstances)
+import Language.Haskell.TH (Dec, Dec(InstanceD), Type(ConT, AppT), pprint, Q, reifyInstances)
 
 forkWait :: IO a -> IO (IO a)
 forkWait a = do
@@ -14,11 +14,11 @@ forkWait a = do
 
 -- | Apply a filter such as 'simpleMissingInstanceTest' to a list of
 -- instances, resulting in a non-overlapping list of instances.
-missingInstances :: (InstanceDec -> Q Bool) -> Q [InstanceDec] -> Q [InstanceDec]
+missingInstances :: (Dec -> Q Bool) -> Q [Dec] -> Q [Dec]
 missingInstances test decs = decs >>= mapM (\ dec -> test dec >>= \ flag -> return $ if flag then (Just dec) else Nothing) >>= return . catMaybes
 
 -- | Return True if no instance matches the types (ignoring the instance context)
-simpleMissingInstanceTest :: InstanceDec -> Q Bool
+simpleMissingInstanceTest :: Dec -> Q Bool
 simpleMissingInstanceTest dec@(InstanceD _ typ _) =
     case unfoldInstance typ of
       Just (name, types) -> reifyInstances name types >>= return . null
