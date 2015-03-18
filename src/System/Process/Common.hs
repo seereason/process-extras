@@ -24,10 +24,10 @@ import System.Exit (ExitCode(ExitFailure))
 import System.IO (Handle, hClose, hFlush, BufferMode, hSetBuffering)
 import System.IO.Unsafe (unsafeInterleaveIO)
 import System.Process hiding (readProcessWithExitCode)
-import Utils (forkWait, missingInstances, simpleMissingInstanceTest)
+import Utils (forkWait)
 
--- | This instance lets us use DeepSeq's force'function on a stream of Chunks.
-$(missingInstances simpleMissingInstanceTest [d|instance NFData ExitCode|])
+-- | This instance lets us use DeepSeq's force function on a stream of Chunks.
+instance NFData ExitCode
 
 class ProcessMaker a where
     process :: a -> IO (Handle, Handle, Handle, ProcessHandle)

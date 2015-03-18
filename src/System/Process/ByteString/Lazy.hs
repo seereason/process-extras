@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, TemplateHaskell #-}
+{-# LANGUAGE CPP, MultiParamTypeClasses, TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.ByteString.Lazy where
 
@@ -12,9 +12,10 @@ import Prelude hiding (null)
 import System.Process
 import System.Process.Common
 import System.Exit (ExitCode)
-import Utils (missingInstances, simpleMissingInstanceTest)
 
-$(missingInstances simpleMissingInstanceTest [d|instance NFData ByteString|])
+#if !MIN_VERSION_bytestring(0,10,0)
+instance NFData ByteString
+#endif
 
 -- | Like 'System.Process.readProcessWithExitCode', but using 'ByteString'
 instance ListLikeProcessIO ByteString Word8 where
