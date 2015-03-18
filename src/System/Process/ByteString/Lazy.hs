@@ -1,9 +1,9 @@
-{-# LANGUAGE CPP, MultiParamTypeClasses, TemplateHaskell #-}
+{-# LANGUAGE CPP, MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.ByteString.Lazy where
 
 import Control.Applicative ((<$>))
-import Control.DeepSeq (NFData, force)
+import Control.DeepSeq (force)
 import qualified Control.Exception as C (evaluate)
 import Data.ByteString.Lazy (ByteString, toChunks, fromChunks)
 import Data.ListLike.IO (hGetContents)
@@ -14,6 +14,8 @@ import System.Process.Common
 import System.Exit (ExitCode)
 
 #if !MIN_VERSION_bytestring(0,10,0)
+import Control.DeepSeq (NFData)
+
 instance NFData ByteString
 #endif
 

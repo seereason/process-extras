@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module Utils where
 
 import Control.Concurrent

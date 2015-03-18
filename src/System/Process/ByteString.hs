@@ -1,9 +1,8 @@
-{-# LANGUAGE CPP, MultiParamTypeClasses, TemplateHaskell #-}
+{-# LANGUAGE CPP, MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.ByteString where
 
 import Control.Applicative ((<$>))
-import Control.DeepSeq (NFData)
 import Control.Monad
 import Data.ByteString (ByteString)
 import Data.ListLike.IO (hGetContents)
@@ -14,6 +13,8 @@ import System.Process.Common
 import System.Exit (ExitCode)
 
 #if !MIN_VERSION_bytestring(0,10,0)
+import Control.DeepSeq (NFData)
+
 instance NFData ByteString
 #endif
 
