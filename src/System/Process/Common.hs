@@ -1,4 +1,12 @@
-{-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, RankNTypes, ScopedTypeVariables, UndecidableInstances #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.Common
     ( ProcessMaker(process)
@@ -10,21 +18,27 @@ module System.Process.Common
     , readCreateProcessLazy
     ) where
 
+#if __GLASGOW_HASKELL__ <= 709
 import Control.Applicative (pure, (<$>), (<*>))
+import Data.Monoid (Monoid(mempty, mappend))
+#endif
 import Control.Concurrent
 import Control.DeepSeq (NFData)
 import Control.Exception as E (SomeException, onException, catch, mask, throw, try)
 import Control.Monad
 import Data.ListLike (null)
 import Data.ListLike.IO (ListLikeIO, hGetContents, hPutStr)
-import Data.Monoid (Monoid(mempty, mappend), (<>))
+import Data.Monoid ((<>))
+import GHC.Generics
 import GHC.IO.Exception (IOErrorType(ResourceVanished), IOException(ioe_type))
 import Prelude hiding (null)
-import System.Exit (ExitCode(ExitFailure))
+import System.Exit (ExitCode(..))
 import System.IO (Handle, hClose, hFlush, BufferMode, hSetBuffering)
 import System.IO.Unsafe (unsafeInterleaveIO)
-import System.Process hiding (readProcessWithExitCode)
+import System.Process (CreateProcess(std_err, std_in, std_out), StdStream(CreatePipe), ProcessHandle, createProcess, proc, waitForProcess, terminateProcess)
 import Utils (forkWait)
+
+deriving instance Generic ExitCode
 
 -- | This instance lets us use DeepSeq's force function on a stream of Chunks.
 instance NFData ExitCode
