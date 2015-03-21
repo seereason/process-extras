@@ -18,10 +18,6 @@ module System.Process.Common
     , readCreateProcessLazy
     ) where
 
-#if __GLASGOW_HASKELL__ <= 709
-import Control.Applicative (pure, (<$>), (<*>))
-import Data.Monoid (Monoid(mempty, mappend))
-#endif
 import Control.Concurrent
 import Control.DeepSeq (NFData)
 import Control.Exception as E (SomeException, onException, catch, mask, throw, try)
@@ -29,7 +25,6 @@ import Control.Monad
 import Data.ListLike (null)
 import Data.ListLike.IO (ListLikeIO, hGetContents, hPutStr)
 import Data.Monoid ((<>))
-import GHC.Generics
 import GHC.IO.Exception (IOErrorType(ResourceVanished), IOException(ioe_type))
 import Prelude hiding (null)
 import System.Exit (ExitCode(..))
@@ -38,7 +33,14 @@ import System.IO.Unsafe (unsafeInterleaveIO)
 import System.Process (CreateProcess(std_err, std_in, std_out), StdStream(CreatePipe), ProcessHandle, createProcess, proc, waitForProcess, terminateProcess)
 import Utils (forkWait)
 
+#if __GLASGOW_HASKELL__ <= 709
+import Control.Applicative (pure, (<$>), (<*>))
+import Data.Monoid (Monoid(mempty, mappend))
+#else
+import GHC.Generics
+
 deriving instance Generic ExitCode
+#endif
 
 -- | This instance lets us use DeepSeq's force function on a stream of Chunks.
 instance NFData ExitCode
