@@ -39,7 +39,9 @@ import Data.Monoid (Monoid(mempty, mappend))
 #else
 import GHC.Generics
 
+#if __GLASGOW_HASKELL__ <= 710
 deriving instance Generic ExitCode
+#endif
 #endif
 
 -- | This instance lets us use DeepSeq's force function on a stream of Chunks.
