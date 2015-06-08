@@ -5,7 +5,7 @@
 -- you can have readCreateProcess output a list of Chunk, operate on
 -- it to do progress reporting, and finally convert it to the type
 -- that readProcessWithExitCode woud have returned.
-{-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, UndecidableInstances #-}
+{-# LANGUAGE CPP, FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, UndecidableInstances #-}
 {-# OPTIONS_GHC -Wall -fno-warn-orphans #-}
 module System.Process.ListLike
     ( ProcessMaker(process)
@@ -24,7 +24,9 @@ module System.Process.ListLike
 import Control.DeepSeq (force)
 import Control.Exception as C (evaluate, SomeException, throw)
 import Data.ListLike.IO (hGetContents)
+#if __GLASGOW_HASKELL__ <= 709
 import Data.Monoid (mempty, mconcat)
+#endif
 import Data.Text (unpack)
 import Data.Text.Lazy (Text, toChunks)
 import System.Exit (ExitCode)

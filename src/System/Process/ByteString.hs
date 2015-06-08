@@ -2,7 +2,9 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.ByteString where
 
+#if __GLASGOW_HASKELL__ <= 709
 import Control.Applicative ((<$>))
+#endif
 import Control.Monad
 import Data.ByteString (ByteString)
 import Data.ListLike.IO (hGetContents)

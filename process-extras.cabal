@@ -1,5 +1,5 @@
 Name:               process-extras
-Version:            0.3.3.4
+Version:            0.3.3.5
 Synopsis:           Process extras
 Description:        Extra functionality for the Process library
                     <http://hackage.haskell.org/package/process>.
@@ -12,7 +12,7 @@ Category:           System
 Build-type:         Simple
 Cabal-version:      >=1.6
 Extra-source-files:
-  README.md
+  README.md, .travis.yml
 
 source-repository head
   Type:             git

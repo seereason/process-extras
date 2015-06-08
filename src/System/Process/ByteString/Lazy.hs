@@ -2,7 +2,9 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.ByteString.Lazy where
 
+#if __GLASGOW_HASKELL__ <= 709
 import Control.Applicative ((<$>))
+#endif
 import Control.DeepSeq (force)
 import qualified Control.Exception as C (evaluate)
 import Data.ByteString.Lazy (ByteString, toChunks, fromChunks)
