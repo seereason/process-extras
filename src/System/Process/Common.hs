@@ -44,8 +44,10 @@ deriving instance Generic ExitCode
 #endif
 #endif
 
+#if !MIN_VERSION_deepseq(1,4,2)
 -- | This instance lets us use DeepSeq's force function on a stream of Chunks.
 instance NFData ExitCode
+#endif
 
 class ProcessMaker a where
     process :: a -> IO (Handle, Handle, Handle, ProcessHandle)
