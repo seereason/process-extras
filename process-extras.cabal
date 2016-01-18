@@ -13,6 +13,7 @@ Build-type:         Simple
 Cabal-version:      >=1.6
 Extra-source-files:
   README.md, .travis.yml
+Tested-With:        GHC == 7.4.2, GHC == 7.6.3, GHC == 7.8.4, GHC == 7.10.3, GHC >= 8
 
 source-repository head
   Type:             git
