@@ -44,4 +44,5 @@ Library
     process,
     bytestring,
     text,
-    deepseq >= 1.1
+    deepseq >= 1.1,
+    generic-deriving >= 1.10
