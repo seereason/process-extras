@@ -1,11 +1,9 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.Common
@@ -25,6 +23,7 @@ import Control.Monad
 import Data.ListLike (null)
 import Data.ListLike.IO (ListLikeIO, hGetContents, hPutStr)
 import Data.Monoid ((<>))
+import Generics.Deriving.Instances ()
 import GHC.IO.Exception (IOErrorType(ResourceVanished), IOException(ioe_type))
 import Prelude hiding (null)
 import System.Exit (ExitCode(..))
@@ -36,12 +35,6 @@ import Utils (forkWait)
 #if __GLASGOW_HASKELL__ <= 709
 import Control.Applicative (pure, (<$>), (<*>))
 import Data.Monoid (Monoid(mempty, mappend))
-#else
-import GHC.Generics
-
-#if __GLASGOW_HASKELL__ <= 710
-deriving instance Generic ExitCode
-#endif
 #endif
 
 #if !MIN_VERSION_deepseq(1,4,2)
