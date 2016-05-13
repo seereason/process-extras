@@ -118,9 +118,14 @@ readCreateProcess maker input = mask $ \restore -> do
       -- fork off a thread to start consuming stderr
       waitErr <- forkWait $ errf <$> (hGetContents errh >>= forceOutput)
 
-      -- now write and flush any input
-      unless (null input) $ do ignoreResourceVanished (hPutStr inh input); hFlush inh
-      hClose inh -- done with stdin
+      -- now write and flush any input.  Catch and ignore
+      -- ResourceVanished to avoid crashes when the process we are
+      -- writing to exits prematurely.
+      ignoreResourceVanished $ do
+        unless (ListLike.null input) $ do
+          hPutStr inh input
+          hFlush inh
+        hClose inh -- stdin has been fully written
 
       -- wait on the output
       out <- waitOut
