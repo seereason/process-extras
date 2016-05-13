@@ -20,7 +20,7 @@ import Control.Concurrent
 import Control.DeepSeq (NFData)
 import Control.Exception as E (SomeException, onException, catch, mask, throw, try)
 import Control.Monad
-import Data.ListLike (null)
+import Data.ListLike as ListLike (null)
 import Data.ListLike.IO (ListLikeIO, hGetContents, hPutStr)
 import Data.Monoid ((<>))
 import Generics.Deriving.Instances ()
