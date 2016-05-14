@@ -199,4 +199,4 @@ writeInput inh input =
 -- before they have read all of their input.
 ignoreResourceVanished :: IO () -> IO ()
 ignoreResourceVanished action =
-    action `catch` (\e -> if ioe_type e == ResourceVanished then return pure () else ioError e)
+    action `catch` (\e -> if ioe_type e == ResourceVanished then return () else ioError e)
