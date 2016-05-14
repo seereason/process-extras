@@ -33,7 +33,7 @@ import System.Process (CreateProcess(std_err, std_in, std_out), StdStream(Create
 import Utils (forkWait)
 
 #if __GLASGOW_HASKELL__ <= 709
-import Control.Applicative (pure, (<$>), (<*>))
+import Control.Applicative ((<$>), (<*>))
 import Data.Monoid (Monoid(mempty, mappend))
 #endif
 
@@ -142,7 +142,7 @@ readCreateProcessLazy maker input = mask $ \restore -> do
        do -- fork off a thread to start consuming stdout
           -- Without unsafeIntereleaveIO the pid messsage gets stuck
           -- until some additional output arrives from the process.
-          waitOut <- forkWait $ (<>) <$> pure (pidf pid)
+          waitOut <- forkWait $ (<>) <$> return (pidf pid)
                                      <*> unsafeInterleaveIO (readInterleaved [(outf, outh), (errf, errh)] (codef <$> waitForProcess pid))
           writeInput inh input
           waitOut)
@@ -199,4 +199,4 @@ writeInput inh input =
 -- before they have read all of their input.
 ignoreResourceVanished :: IO () -> IO ()
 ignoreResourceVanished action =
-    action `catch` (\e -> if ioe_type e == ResourceVanished then pure () else ioError e)
+    action `catch` (\e -> if ioe_type e == ResourceVanished then return pure () else ioError e)

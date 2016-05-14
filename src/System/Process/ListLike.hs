@@ -113,10 +113,10 @@ collectOutput xs = mconcat $ map (foldOutput pidf outf errf intf codef) xs
 
 -- | Send Stdout chunks to stdout and Stderr chunks to stderr.
 writeOutput :: ListLikeIO a c => [Chunk a] -> IO ()
-writeOutput [] = pure ()
+writeOutput [] = return ()
 writeOutput (x : xs) =
-    foldOutput (\_ -> pure ())
+    foldOutput (\_ -> return ())
                (hPutStr stdout)
                (hPutStr stderr)
-               (\_ -> pure ())
-               (\_ -> pure ()) x >> writeOutput xs
+               (\_ -> return ())
+               (\_ -> return ()) x >> writeOutput xs
