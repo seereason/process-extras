@@ -118,14 +118,8 @@ readCreateProcess maker input = mask $ \restore -> do
       -- fork off a thread to start consuming stderr
       waitErr <- forkWait $ errf <$> (hGetContents errh >>= forceOutput)
 
-      -- now write and flush any input.  Catch and ignore
-      -- ResourceVanished to avoid crashes when the process we are
-      -- writing to exits prematurely.
-      ignoreResourceVanished $ do
-        unless (ListLike.null input) $ do
-          hPutStr inh input
-          hFlush inh
-        hClose inh -- stdin has been fully written
+      -- now write and flush any input.
+      writeInput inh input
 
       -- wait on the output
       out <- waitOut
@@ -138,13 +132,6 @@ readCreateProcess maker input = mask $ \restore -> do
       ex <- codef <$> waitForProcess pid
 
       return $ out <> err <> ex
-
-ignoreResourceVanished :: IO () -> IO ()
-ignoreResourceVanished action =
-    try action >>= either ignoreResourceVanished' return
-    where
-      ignoreResourceVanished' e | ioe_type e == ResourceVanished = return ()
-      ignoreResourceVanished' e = throw e
 
 -- | Like readCreateProcess, but the output is read lazily.
 readCreateProcessLazy :: (ProcessMaker maker, ProcessOutput a b, ListLikeProcessIO a c) => maker -> a -> IO b
@@ -199,13 +186,17 @@ readInterleaved' pairs finish res = do
 -- Catch and ignore Resource Vanished exceptions, they just mean the
 -- process exited before all of its output was read.
 writeInput :: ListLikeProcessIO a c => Handle -> a -> IO ()
-writeInput inh input = do
-  (do unless (null input) (hPutStr inh input >> hFlush inh)
-      hClose inh) `E.catch` resourceVanished (\ _ -> return ())
+writeInput inh input =
+    ignoreResourceVanished $ do
+      unless (ListLike.null input) $ do
+        hPutStr inh input
+        hFlush inh
+      hClose inh -- stdin has been fully written
 
 -- | Wrapper for a process that provides a handler for the
 -- ResourceVanished exception.  This is frequently an exception we
 -- wish to ignore, because many processes will deliberately exit
 -- before they have read all of their input.
-resourceVanished :: (IOError -> IO a) -> IOError -> IO a
-resourceVanished epipe e = if ioe_type e == ResourceVanished then epipe e else ioError e
+ignoreResourceVanished :: IO () -> IO ()
+ignoreResourceVanished action =
+    action `catch` (\e -> if ioe_type e == ResourceVanished then pure () else ioError e)
