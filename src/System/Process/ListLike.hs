@@ -17,20 +17,25 @@ module System.Process.ListLike
     , readProcessWithExitCode
     , Chunk(..)
     , collectOutput
+    , foldOutput
+    , writeOutput
     , showCreateProcessForUser
     , showCmdSpecForUser
+    , proc
+    , shell
     ) where
 
 import Control.DeepSeq (force)
 import Control.Exception as C (evaluate, SomeException, throw)
-import Data.ListLike.IO (hGetContents)
+import Data.ListLike.IO (hGetContents, hPutStr, ListLikeIO)
 #if __GLASGOW_HASKELL__ <= 709
 import Data.Monoid (mempty, mconcat)
 #endif
 import Data.Text (unpack)
 import Data.Text.Lazy (Text, toChunks)
 import System.Exit (ExitCode)
-import System.Process (CmdSpec(..), CreateProcess(..), ProcessHandle, showCommandForUser)
+import System.IO (stdout, stderr)
+import System.Process (CmdSpec(..), CreateProcess(..), proc, ProcessHandle, shell, showCommandForUser)
 import System.Process.ByteString ()
 import System.Process.ByteString.Lazy ()
 import System.Process.Common (ProcessMaker(process), ListLikeProcessIO(forceOutput, readChunks), ProcessOutput(pidf, outf, errf, codef, intf),
@@ -70,6 +75,10 @@ data Chunk a
     | Result ExitCode
     | Exception SomeException
       -- ^ Note that the instances below do not use this constructor.
+    deriving Show
+
+instance Show ProcessHandle where
+    show _ = "<process>"
 
 instance ListLikeProcessIO a c => ProcessOutput a [Chunk a] where
     pidf p = [ProcessHandle p]
@@ -85,11 +94,29 @@ instance ListLikeProcessIO a c => ProcessOutput a (ExitCode, [Chunk a]) where
     errf x = (mempty, [Stderr x])
     intf e = throw e
 
+foldOutput :: (ProcessHandle -> r)
+           -> (a -> r)
+           -> (a -> r)
+           -> (SomeException -> r)
+           -> (ExitCode -> r)
+           -> Chunk a
+           -> r
+foldOutput p _ _ _ _ (ProcessHandle x) = p x
+foldOutput _ o _ _ _ (Stdout x) = o x
+foldOutput _ _ e _ _ (Stderr x) = e x
+foldOutput _ _ _ i _ (Exception x) = i x
+foldOutput _ _ _ _ r (Result x) = r x
+
 -- | Turn a @[Chunk a]@ into any other instance of 'ProcessOutput'.
 collectOutput :: ProcessOutput a b => [Chunk a] -> b
-collectOutput xs = mconcat $ map (\ chunk -> case chunk of
-                                               ProcessHandle x -> pidf x
-                                               Stdout x -> outf x
-                                               Stderr x -> errf x
-                                               Result x -> codef x
-                                               Exception x -> intf x) xs
+collectOutput xs = mconcat $ map (foldOutput pidf outf errf intf codef) xs
+
+-- | Send Stdout chunks to stdout and Stderr chunks to stderr.
+writeOutput :: ListLikeIO a c => [Chunk a] -> IO ()
+writeOutput [] = pure ()
+writeOutput (x : xs) =
+    foldOutput (\_ -> pure ())
+               (hPutStr stdout)
+               (hPutStr stderr)
+               (\_ -> pure ())
+               (\_ -> pure ()) x >> writeOutput xs
