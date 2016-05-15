@@ -1,0 +1,4 @@
+:set -isrc
+:set -DMIN_VERSION_deepseq(a,b,c)=1
+:set -DMIN_VERSION_bytestring(a,b,c)=1
+:load System.Process.ListLike
