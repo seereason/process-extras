@@ -1,8 +1,14 @@
+haskell-process-extras (0.4.1.4) unstable; urgency=low
+
+  * Add changelog and .ghci to Extra-Source-Files list.
+
+ -- David Fox <dsf@seereason.com>  Sun, 15 May 2016 09:20:54 -0700
+
 haskell-process-extras (0.4.1.3) unstable; urgency=low
 
   * Actually check changelog into git.
 
- -- David Fox <dsf@foxthompson.net>  Sun, 15 May 2016 09:00:03 -0700
+ -- David Fox <dsf@seereason.com>  Sun, 15 May 2016 09:00:03 -0700
 
 haskell-process-extras (0.4) trusty-seereason; urgency=low
 
@@ -12,4 +18,4 @@ haskell-process-extras (0.4) trusty-seereason; urgency=low
   * Add foldOutput and writeOutput, for handling Chunk streams.
   * Add some examples in README.md.
 
- -- David Fox <dsf@foxthompson.net>  Sun, 15 May 2016 08:49:09 -0700
+ -- David Fox <dsf@seereason.com>  Sun, 15 May 2016 08:59:47 -0700

@@ -1,5 +1,5 @@
 Name:               process-extras
-Version:            0.4.1.3
+Version:            0.4.1.4
 Synopsis:           Process extras
 Description:        Extends <http://hackage.haskell.org/package/process>.
                     Read process input and output as ByteStrings or
@@ -15,7 +15,7 @@ Category:           System
 Build-type:         Simple
 Cabal-version:      >=1.6
 Extra-source-files:
-  README.md, .travis.yml
+  README.md, .travis.yml, .ghci, changelog
 Tested-With:        GHC == 7.4.2, GHC == 7.6.3, GHC == 7.8.4, GHC == 7.10.3, GHC >= 8
 
 source-repository head
