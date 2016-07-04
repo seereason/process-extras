@@ -6,7 +6,7 @@ import Control.Applicative ((<$>))
 import Control.DeepSeq (force)
 import qualified Control.Exception as C (evaluate)
 import Data.ListLike.IO (hGetContents)
-import Data.Text.Lazy (Text, fromChunks, toChunks)
+import Data.Text.Lazy (Text, fromStrict, toChunks)
 import Prelude hiding (null)
 import System.Process
 import System.Process.Common
@@ -15,7 +15,7 @@ import System.Exit (ExitCode)
 -- | Like 'System.Process.readProcessWithExitCode', but using 'Text'
 instance ListLikeProcessIO Text Char where
     forceOutput = C.evaluate . force
-    readChunks h = (map (fromChunks . (: [])) . toChunks) <$> hGetContents h
+    readChunks h = (map fromStrict . toChunks) <$> hGetContents h
 
 -- | Specialized version for backwards compatibility.
 readProcessWithExitCode

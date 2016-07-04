@@ -41,6 +41,7 @@ import System.Process.ByteString.Lazy ()
 import System.Process.Common (ProcessMaker(process), ListLikeProcessIO(forceOutput, readChunks), ProcessOutput(pidf, outf, errf, codef, intf),
                               readCreateProcess, readCreateProcessLazy, readCreateProcessWithExitCode, readProcessWithExitCode)
 import System.Process.Text ()
+import System.Process.Text.Builder ()
 import System.Process.Text.Lazy ()
 
 -- | System.Process utility functions.
