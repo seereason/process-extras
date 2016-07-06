@@ -2,9 +2,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.Text where
 
-#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
-#endif
 import Control.Monad
 import Data.ListLike.IO (hGetContents)
 import Data.Text (Text)

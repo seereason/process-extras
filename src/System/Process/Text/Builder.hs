@@ -2,9 +2,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.Text.Builder where
 
-#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
-#endif
 import Control.DeepSeq (force)
 import qualified Control.Exception as C (evaluate)
 import Data.ListLike.IO (hGetContents)
