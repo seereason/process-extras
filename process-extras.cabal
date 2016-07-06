@@ -30,6 +30,7 @@ Library
   Exposed-modules:
     System.Process.ByteString
     System.Process.ByteString.Lazy
+    System.Process.Chars
     System.Process.Common
     System.Process.ListLike
     System.Process.Text
@@ -41,7 +42,7 @@ Library
 
   Build-depends:
     base >= 4.5 && < 5,
-    ListLike >= 4.3.5,
+    ListLike >= 4.4,
     process,
     bytestring,
     text,

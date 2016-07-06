@@ -1,13 +1,14 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE CPP, MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.Text.Builder where
 
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+#endif
 import Control.DeepSeq (force)
 import qualified Control.Exception as C (evaluate)
-import qualified Data.ListLike as LL
 import Data.ListLike.IO (hGetContents)
-import Data.Text.Lazy (Text, fromChunks, toChunks)
+import Data.Text.Lazy (toChunks)
 import Data.Text.Lazy.Builder (Builder, fromText)
 import Prelude hiding (null)
 import System.Process
