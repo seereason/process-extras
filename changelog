@@ -1,3 +1,10 @@
+haskell-process-extras (0.5) unstable; urgency=low
+
+  * Have writeOutput return the input list rather than ()
+  * Additional re-exports from the process package
+
+ -- David Fox <dsf@foxthompson.net>  Mon, 21 Nov 2016 12:45:57 -0800
+
 haskell-process-extras (0.4.1.4) unstable; urgency=low
 
   * Add changelog and .ghci to Extra-Source-Files list.

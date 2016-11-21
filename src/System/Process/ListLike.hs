@@ -8,21 +8,34 @@
 {-# LANGUAGE CPP, FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, UndecidableInstances #-}
 {-# OPTIONS_GHC -Wall -fno-warn-orphans #-}
 module System.Process.ListLike
-    ( ProcessMaker(process)
-    , ListLikeProcessIO(forceOutput)
+    (
+    -- * Classes for process IO monad, output type, and creation type
+      ListLikeProcessIO(forceOutput)
     , ProcessOutput(pidf, outf, errf, codef, intf)
+    , ProcessMaker(process)
+
+    -- * The generalized process runners
     , readCreateProcess
     , readCreateProcessLazy
     , readCreateProcessWithExitCode
     , readProcessWithExitCode
+
+    -- * Utility functions based on showCommandForUser
+    , showCreateProcessForUser
+    , showCmdSpecForUser
+
+    -- * The Chunk type
     , Chunk(..)
     , collectOutput
     , foldOutput
     , writeOutput
-    , showCreateProcessForUser
-    , showCmdSpecForUser
+
+    -- * Re-exports from process
+    , CmdSpec(..)
+    , CreateProcess(..)
     , proc
     , shell
+    , showCommandForUser
     ) where
 
 import Control.DeepSeq (force)
@@ -95,11 +108,11 @@ instance ListLikeProcessIO a c => ProcessOutput a (ExitCode, [Chunk a]) where
     errf x = (mempty, [Stderr x])
     intf e = throw e
 
-foldOutput :: (ProcessHandle -> r)
-           -> (a -> r)
-           -> (a -> r)
-           -> (SomeException -> r)
-           -> (ExitCode -> r)
+foldOutput :: (ProcessHandle -> r) -- ^ called when the process handle becomes known
+           -> (a -> r) -- ^ stdout handler
+           -> (a -> r) -- ^ stderr handler
+           -> (SomeException -> r) -- ^ exception handler
+           -> (ExitCode -> r) -- ^ exit code handler
            -> Chunk a
            -> r
 foldOutput p _ _ _ _ (ProcessHandle x) = p x
@@ -108,16 +121,19 @@ foldOutput _ _ e _ _ (Stderr x) = e x
 foldOutput _ _ _ i _ (Exception x) = i x
 foldOutput _ _ _ _ r (Result x) = r x
 
--- | Turn a @[Chunk a]@ into any other instance of 'ProcessOutput'.
+-- | Turn a @[Chunk a]@ into any other instance of 'ProcessOutput'.  I
+-- usually use this after processing the chunk list to turn it into
+-- the (ExitCode, String, String) type returned by readProcessWithExitCode.
 collectOutput :: ProcessOutput a b => [Chunk a] -> b
 collectOutput xs = mconcat $ map (foldOutput pidf outf errf intf codef) xs
 
 -- | Send Stdout chunks to stdout and Stderr chunks to stderr.
-writeOutput :: ListLikeIO a c => [Chunk a] -> IO ()
-writeOutput [] = return ()
+-- Returns input list unmodified.
+writeOutput :: ListLikeIO a c => [Chunk a] -> IO [Chunk a]
+writeOutput [] = return []
 writeOutput (x : xs) =
     foldOutput (\_ -> return ())
                (hPutStr stdout)
                (hPutStr stderr)
                (\_ -> return ())
-               (\_ -> return ()) x >> writeOutput xs
+               (\_ -> return ()) x >> writeOutput xs >> return (x : xs)

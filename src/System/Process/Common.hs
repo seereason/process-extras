@@ -18,7 +18,7 @@ module System.Process.Common
 
 import Control.Concurrent
 import Control.DeepSeq (NFData)
-import Control.Exception as E (SomeException, onException, catch, mask, throw, try)
+import Control.Exception as E (SomeException, onException, catch, mask, throw)
 import Control.Monad
 import Data.ListLike as ListLike (null)
 import Data.ListLike.IO (ListLikeIO, hGetContents, hPutStr)
@@ -84,12 +84,19 @@ instance Monoid ExitCode where
     mappend x (ExitFailure 0) = x
     mappend _ x = x
 
+-- | Process IO is based on the 'ListLikeIO' class from the ListLike
+-- package
 class ListLikeIO a c => ListLikeProcessIO a c where
     forceOutput :: a -> IO a
     readChunks :: Handle -> IO [a]
     -- ^ Read from a handle, returning a lazy list of the monoid a.
 
--- | Like 'System.Process.readProcessWithExitCode', but with generalized input and output type.
+-- | Like 'System.Process.readProcessWithExitCode', but with
+-- generalized input and output type.  Aside from the usual text-like
+-- types, the output can be a list of Chunk a.  This lets you process
+-- the chunks received from stdout and stderr lazil, in the order they
+-- are received, as well as the exit code.  Utilities to handle Chunks
+-- are provided in System.Process.ListLike.
 readProcessWithExitCode
     :: ListLikeProcessIO a c =>
        FilePath                 -- ^ command to run
