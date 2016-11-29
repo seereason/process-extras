@@ -44,6 +44,7 @@ import Control.DeepSeq (force)
 import Control.Exception as C (evaluate, SomeException, throw)
 import Data.ListLike.IO (hGetContents, hPutStr, ListLikeIO)
 #if __GLASGOW_HASKELL__ <= 709
+import Control.Applicative ((<$>), (<*>))
 import Data.Monoid (mempty, mconcat)
 #endif
 import Data.Text (unpack)

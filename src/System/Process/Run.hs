@@ -1,5 +1,6 @@
 -- | Flexible control of progress reporting for readCreateProcess and friends.
 
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -20,6 +21,10 @@ module System.Process.Run
     , indent
     ) where
 
+#if __GLASGOW_HASKELL__ <= 709
+import Control.Applicative ((<$>), (<*>))
+import Data.Monoid (mempty)
+#endif
 import Control.Monad (when)
 import Control.Monad.State (evalState, evalStateT, get, modify, MonadState, put, StateT)
 import Control.Monad.Trans (MonadIO, lift, liftIO)
