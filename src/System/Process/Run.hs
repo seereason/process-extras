@@ -22,7 +22,6 @@ module System.Process.Run
     ) where
 
 #if __GLASGOW_HASKELL__ <= 709
-import Control.Applicative ((<$>), (<*>))
 import Data.Monoid (Monoid, mempty)
 #endif
 import Control.Monad (when)
@@ -198,14 +197,16 @@ indentChunk :: forall m text char.
                char -> text -> text -> Chunk text -> m (Chunk text, [Chunk text])
 indentChunk nl outp errp chunk =
     case chunk of
-      Stdout x -> (chunk,) <$> doText Stdout outp x
-      Stderr x -> (chunk,) <$> doText Stderr errp x
+      Stdout x -> doText Stdout outp x >>= return . (chunk,)
+      Stderr x -> doText Stderr errp x >>= return . (chunk,)
       _ -> return (chunk, [chunk])
     where
       -- doText :: (a -> Chunk a) -> a -> a -> StateT BOL m [Chunk a]
       doText con pre x = do
         let (hd, tl) = ListLike.break (== nl) x
-        (<>) <$> doHead con pre hd <*> doTail con pre tl
+        hd' <- doHead con pre hd
+        tl' <- doTail con pre tl
+        return $ hd' <> tl'
       -- doHead :: (a -> Chunk a) -> a -> a -> StateT BOL m [Chunk a]
       doHead _ _ x | ListLike.null x = return []
       doHead con pre x = do
@@ -234,4 +235,4 @@ _test4 = evalStateT (indent (<> "1> ") (<> "2> ") >> run (proc "ls" []) "") def
 _test5 :: IO [Chunk String]
 _test5 = evalStateT (echoStart >> echoEnd >> run (proc "ls" []) "") def
 _test6 :: IO [Chunk String]
-_test6 = take 2 <$> evalStateT (silent >> echoStart >> echoEnd >> run (proc "yes" []) "") def :: IO [Chunk String]
+_test6 = (evalStateT (silent >> echoStart >> echoEnd >> run (proc "yes" []) "") def :: IO [Chunk String]) >>= return . take 2
