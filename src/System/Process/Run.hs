@@ -23,7 +23,7 @@ module System.Process.Run
 
 #if __GLASGOW_HASKELL__ <= 709
 import Control.Applicative ((<$>), (<*>))
-import Data.Monoid (mempty)
+import Data.Monoid (Monoid, mempty)
 #endif
 import Control.Monad (when)
 import Control.Monad.State (evalState, evalStateT, get, modify, MonadState, put, StateT)
