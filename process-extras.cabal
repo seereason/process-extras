@@ -1,5 +1,5 @@
 Name:               process-extras
-Version:            0.5
+Version:            0.6
 Synopsis:           Process extras
 Description:        Extends <http://hackage.haskell.org/package/process>.
                     Read process input and output as ByteStrings or
@@ -33,6 +33,7 @@ Library
     System.Process.Chars
     System.Process.Common
     System.Process.ListLike
+    System.Process.Run
     System.Process.Text
     System.Process.Text.Lazy
     System.Process.Text.Builder
@@ -42,7 +43,9 @@ Library
 
   Build-depends:
     base >= 4.5 && < 5,
+    data-default,
     ListLike >= 4.4,
+    mtl,
     process,
     bytestring,
     text,

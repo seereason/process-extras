@@ -1,10 +1,14 @@
-# About
+# What is process-extras
 
-Extra functionality for the [Process library](http://hackage.haskell.org/package/process).
-
- * Read process input and output as ByteStrings or Text, or write your own ProcessOutput instance.
- * Lazy process input and output (i.e. read output from processes that run forever.)
- * ProcessMaker class for more flexibility in the process creation API.
+You might want to use this package if
+ * You want to read and write ByteStrings or Text to a process rather
+   than just Strings
+ * You want to read output from a non-terminating process (e.g. yes(1))
+ * You want more flexibility in process creation
+ * You want various types of progress output from the process to the
+   console before capturing its output - indented and prefixed output,
+   reporting of the command that started the process, dots to reflect
+   the size of the process output, etc.
 
 # Contributing
 

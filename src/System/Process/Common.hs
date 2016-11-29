@@ -7,17 +7,18 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.Common
-    ( ProcessMaker(process)
+    ( ProcessMaker(process, showProcessMakerForUser)
     , ListLikeProcessIO(forceOutput, readChunks)
     , ProcessOutput(pidf, outf, errf, intf, codef)
     , readProcessWithExitCode
     , readCreateProcessWithExitCode
-    , readCreateProcess
+    , readCreateProcessStrict
     , readCreateProcessLazy
+    , showCmdSpecForUser
+    , showCreateProcessForUser
     ) where
 
 import Control.Concurrent
-import Control.DeepSeq (NFData)
 import Control.Exception as E (SomeException, onException, catch, mask, throw)
 import Control.Monad
 import Data.ListLike as ListLike (null)
@@ -29,7 +30,7 @@ import Prelude hiding (null)
 import System.Exit (ExitCode(..))
 import System.IO (Handle, hClose, hFlush, BufferMode, hSetBuffering)
 import System.IO.Unsafe (unsafeInterleaveIO)
-import System.Process (CreateProcess(std_err, std_in, std_out), StdStream(CreatePipe), ProcessHandle, createProcess, proc, waitForProcess, terminateProcess)
+import System.Process (CmdSpec(..), CreateProcess(cmdspec, cwd, std_err, std_in, std_out), StdStream(CreatePipe), ProcessHandle, createProcess, proc, showCommandForUser, waitForProcess, terminateProcess)
 import Utils (forkWait)
 
 #if __GLASGOW_HASKELL__ <= 709
@@ -38,20 +39,23 @@ import Data.Monoid (Monoid(mempty, mappend))
 #endif
 
 #if !MIN_VERSION_deepseq(1,4,2)
+import Control.DeepSeq (NFData)
 -- | This instance lets us use DeepSeq's force function on a stream of Chunks.
 instance NFData ExitCode
 #endif
 
 class ProcessMaker a where
     process :: a -> IO (Handle, Handle, Handle, ProcessHandle)
+    showProcessMakerForUser :: a -> String
 
--- | This is the usual maker argument to 'readCreateProcess'.
+-- | This is the usual maker argument to 'readCreateProcessLazy'.
 instance ProcessMaker CreateProcess where
     process p = do
       (Just inh, Just outh, Just errh, pid) <- createProcess p { std_in = CreatePipe, std_out = CreatePipe, std_err = CreatePipe }
       return (inh, outh, errh, pid)
+    showProcessMakerForUser = showCreateProcessForUser
 
--- | Passing this to 'readCreateProcess' as the maker argument allows
+-- | Passing this to 'readCreateProcessLazy' as the maker argument allows
 -- you to set the buffer mode of the process stdout and stderr handles
 -- just after the handles are created.  These are set to
 -- BlockBuffering by default, but for running console commands
@@ -62,6 +66,8 @@ instance ProcessMaker (CreateProcess, BufferMode, BufferMode) where
       hSetBuffering outh outmode
       hSetBuffering errh errmode
       return (inh, outh, errh, pid)
+    showProcessMakerForUser (p, outmode, errmode) =
+        showCreateProcessForUser p ++ " outmode=" ++ show outmode ++ ", errmode=" ++ show errmode
 
 class Monoid b => ProcessOutput a b | b -> a where
     pidf :: ProcessHandle -> b
@@ -110,10 +116,10 @@ readCreateProcessWithExitCode
        maker               -- ^ command and arguments to run
     -> a                   -- ^ standard input
     -> IO (ExitCode, a, a) -- ^ exitcode, stdout, stderr
-readCreateProcessWithExitCode = readCreateProcess
+readCreateProcessWithExitCode = readCreateProcessStrict
 
-readCreateProcess :: (ProcessMaker maker, ProcessOutput a b, ListLikeProcessIO a c) => maker -> a -> IO b
-readCreateProcess maker input = mask $ \restore -> do
+readCreateProcessStrict :: (ProcessMaker maker, ProcessOutput a b, ListLikeProcessIO a c) => maker -> a -> IO b
+readCreateProcessStrict maker input = mask $ \restore -> do
     (inh, outh, errh, pid) <- process maker
     flip onException
       (do terminateProcess pid; hClose inh; hClose outh; hClose errh;
@@ -140,7 +146,7 @@ readCreateProcess maker input = mask $ \restore -> do
 
       return $ out <> err <> ex
 
--- | Like readCreateProcess, but the output is read lazily.
+-- | Like readCreateProcessStrict, but the output is read lazily.
 readCreateProcessLazy :: (ProcessMaker maker, ProcessOutput a b, ListLikeProcessIO a c) => maker -> a -> IO b
 readCreateProcessLazy maker input = mask $ \restore -> do
     (inh, outh, errh, pid) <- process maker
@@ -207,3 +213,12 @@ writeInput inh input =
 ignoreResourceVanished :: IO () -> IO ()
 ignoreResourceVanished action =
     action `E.catch` (\e -> if ioe_type e == ResourceVanished then return () else ioError e)
+
+-- | System.Process utility functions.
+showCreateProcessForUser :: CreateProcess -> String
+showCreateProcessForUser p =
+    showCmdSpecForUser (cmdspec p) ++ maybe "" (\ d -> " (in " ++ d ++ ")") (cwd p)
+
+showCmdSpecForUser :: CmdSpec -> String
+showCmdSpecForUser (ShellCommand s) = s
+showCmdSpecForUser (RawCommand p args) = showCommandForUser p args

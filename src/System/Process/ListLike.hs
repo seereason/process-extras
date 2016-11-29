@@ -12,10 +12,11 @@ module System.Process.ListLike
     -- * Classes for process IO monad, output type, and creation type
       ListLikeProcessIO(forceOutput)
     , ProcessOutput(pidf, outf, errf, codef, intf)
-    , ProcessMaker(process)
+    , ProcessMaker(process, showProcessMakerForUser)
 
     -- * The generalized process runners
     , readCreateProcess
+    , readCreateProcessStrict
     , readCreateProcessLazy
     , readCreateProcessWithExitCode
     , readProcessWithExitCode
@@ -29,6 +30,7 @@ module System.Process.ListLike
     , collectOutput
     , foldOutput
     , writeOutput
+    , writeChunk
 
     -- * Re-exports from process
     , CmdSpec(..)
@@ -51,20 +53,16 @@ import System.IO (stdout, stderr)
 import System.Process (CmdSpec(..), CreateProcess(..), proc, ProcessHandle, shell, showCommandForUser)
 import System.Process.ByteString ()
 import System.Process.ByteString.Lazy ()
-import System.Process.Common (ProcessMaker(process), ListLikeProcessIO(forceOutput, readChunks), ProcessOutput(pidf, outf, errf, codef, intf),
-                              readCreateProcess, readCreateProcessLazy, readCreateProcessWithExitCode, readProcessWithExitCode)
+import System.Process.Common
+    (ProcessMaker(process, showProcessMakerForUser), ListLikeProcessIO(forceOutput, readChunks),
+     ProcessOutput(pidf, outf, errf, codef, intf), readCreateProcessStrict, readCreateProcessLazy,
+     readCreateProcessWithExitCode, readProcessWithExitCode, showCmdSpecForUser, showCreateProcessForUser)
 import System.Process.Text ()
 import System.Process.Text.Builder ()
 import System.Process.Text.Lazy ()
 
--- | System.Process utility functions.
-showCreateProcessForUser :: CreateProcess -> String
-showCreateProcessForUser p =
-    showCmdSpecForUser (cmdspec p) ++ maybe "" (\ d -> " (in " ++ d ++ ")") (cwd p)
-
-showCmdSpecForUser :: CmdSpec -> String
-showCmdSpecForUser (ShellCommand s) = s
-showCmdSpecForUser (RawCommand p args) = showCommandForUser p args
+readCreateProcess :: (ProcessMaker maker, ProcessOutput text result, ListLikeProcessIO text char) => maker -> text -> IO result
+readCreateProcess = readCreateProcessLazy
 
 -- | Like 'System.Process.readProcessWithExitCode' that takes a 'CreateProcess'.
 instance ListLikeProcessIO String Char where
@@ -131,9 +129,13 @@ collectOutput xs = mconcat $ map (foldOutput pidf outf errf intf codef) xs
 -- Returns input list unmodified.
 writeOutput :: ListLikeIO a c => [Chunk a] -> IO [Chunk a]
 writeOutput [] = return []
-writeOutput (x : xs) =
-    foldOutput (\_ -> return ())
-               (hPutStr stdout)
-               (hPutStr stderr)
-               (\_ -> return ())
-               (\_ -> return ()) x >> writeOutput xs >> return (x : xs)
+writeOutput (x : xs) = (:) <$> writeChunk x <*> writeOutput xs
+
+
+writeChunk :: ListLikeIO a c => Chunk a -> IO (Chunk a)
+writeChunk x =
+    foldOutput (\_ -> return x)
+               (\s -> hPutStr stdout s >> return x)
+               (\s -> hPutStr stderr s >> return x)
+               (\_ -> return x)
+               (\_ -> return x) x
