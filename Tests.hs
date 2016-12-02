@@ -1,5 +1,8 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE CPP, FlexibleInstances #-}
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
 import System.Exit (ExitCode(..), exitWith)
 import System.Process.Run
 import System.Process.ByteString ()
@@ -43,8 +46,8 @@ omitProcessHandle (x : xs) = x : omitProcessHandle xs
 
 test0 :: Test
 test0 = TestCase $ do
-          let expected = [Stdout "a\nc",Stderr "b\n",Result ExitSuccess]
-          actual <- omitProcessHandle <$> runT (output >> run cmd "") :: IO [Chunk String]
+          let expected = (ExitSuccess, "a\nc", "b\n") :: (ExitCode, String, String)
+          actual <- collectOutput <$> runT (output >> run cmd "")
           assertEqual "test1" expected actual
 
 -- | What we want to test with these is what gets written to the console,
