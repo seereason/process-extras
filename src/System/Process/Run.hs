@@ -48,8 +48,8 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString)
 import Data.Char (ord)
 import Data.Default (Default(def))
-import Data.ListLike as ListLike (break, fromList, head, hPutStr, length, ListLike, ListLikeIO,
-                                  null, putStr, singleton, tail)
+import Data.ListLike as ListLike
+    (break, fromList, head, hPutStr, length, ListLike, null, putStr, singleton, tail)
 import Data.Monoid ((<>))
 import Data.String (IsString, fromString)
 import Data.Text (Text)
@@ -122,27 +122,27 @@ instance (MonadIO m, Monoid t, MonadState (RunState t) m) => MonadRun m t where
     putRunState = put
 -}
 
-noEcho :: (MonadIO m, MonadState (RunState t) m) => m ()
+noEcho :: (MonadState (RunState t) m) => m ()
 noEcho = modify (\x -> x { _echoStart = False, _echoEnd = False })
 
-echoStart :: (MonadIO m, MonadState (RunState t) m) => m ()
+echoStart :: (MonadState (RunState t) m) => m ()
 echoStart = modify (\x -> x { _echoStart = True })
 
-echoEnd :: (MonadIO m, MonadState (RunState t) m) => m ()
+echoEnd :: (MonadState (RunState t) m) => m ()
 echoEnd = modify (\x -> x { _echoEnd = True })
 
-output :: (MonadIO m, MonadState (RunState t) m) => m ()
+output :: (MonadState (RunState t) m) => m ()
 output = modify (\x -> x { _output = All })
 
-silent :: (MonadIO m, MonadState (RunState t) m) => m ()
+silent :: (MonadState (RunState t) m) => m ()
 silent = modify (\x -> x { _output = Silent })
 
-dots :: (MonadIO m, MonadState (RunState t) m) => Int -> m ()
+dots :: (MonadState (RunState t) m) => Int -> m ()
 dots n = modify (\x -> x { _output = Dots n })
 
 -- | Modify the indentation prefixes for stdout and stderr in the
 -- progress monad.
-indent :: (MonadIO m, MonadState (RunState t) m, ListLike t char) => (t -> t) -> (t -> t) -> m ()
+indent :: (MonadState (RunState t) m, ListLike t char) => (t -> t) -> (t -> t) -> m ()
 indent so se = modify $ \x ->
     let so' = so (_outprefix x)
         se' = se (_errprefix x) in
@@ -151,7 +151,7 @@ indent so se = modify $ \x ->
       , _output = if ListLike.null so' &&
                      ListLike.null se' then _output x else Indented }
 
-noIndent :: (MonadIO m, MonadState (RunState text) m, ListLike text char) => m ()
+noIndent :: (MonadState (RunState text) m, ListLike text char) => m ()
 noIndent = indent (const mempty) (const mempty)
 
 -- | Set verbosity to a specific level from 0 to 3.
@@ -217,7 +217,7 @@ run maker input = run' maker input >>= return . collectOutput
 
 -- | Output the dotified text of a chunk list with a newline at EOF.
 -- Returns the original list.
-putDotsLn :: (ListLikeProcessIO text char, IsString text, Dot char) =>
+putDotsLn :: (ListLikeProcessIO text char, Dot char) =>
              Int -> [Chunk text] -> IO [Chunk text]
 putDotsLn cpd chunks = putDots cpd chunks >>= \ r -> System.IO.hPutStr stderr "\n" >> return r
 
@@ -252,7 +252,7 @@ putChunk (Stdout x) = ListLike.putStr x
 putChunk (Stderr x) = ListLike.hPutStr stderr x
 putChunk _ = return ()
 
-writeOutputIndented :: (ListLikeIO text char, ListLikeProcessIO text char, Eq char, IsString text) =>
+writeOutputIndented :: (ListLikeProcessIO text char, Eq char, IsString text) =>
                        text -> text -> [Chunk text] -> IO [Chunk text]
 writeOutputIndented outp errp chunks =
     mapM (\(c, cs) -> mapM_ writeChunk cs >> return c) (indentChunks outp errp chunks)
