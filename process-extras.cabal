@@ -1,5 +1,5 @@
 Name:               process-extras
-Version:            0.6
+Version:            0.7
 Synopsis:           Process extras
 Description:        Extends <http://hackage.haskell.org/package/process>.
                     Read process input and output as ByteStrings or
@@ -13,7 +13,7 @@ Author:             David Lazar, Bas van Dijk, David Fox
 Maintainer:         David Fox <dsf@seereason.com>
 Category:           System
 Build-type:         Simple
-Cabal-version:      >=1.6
+Cabal-version:      >=1.10
 Extra-source-files:
   README.md, .travis.yml, .ghci, changelog
 Tested-With:        GHC == 7.4.2, GHC == 7.6.3, GHC == 7.8.4, GHC == 7.10.3, GHC >= 8
@@ -23,6 +23,7 @@ source-repository head
   Location:         https://github.com/seereason/process-extras
 
 Library
+  Default-Language: Haskell2010
   ghc-options:      -Wall
 
   Hs-source-dirs:   src
@@ -51,3 +52,10 @@ Library
     text,
     deepseq >= 1.1,
     generic-deriving >= 1.10
+
+Test-Suite process-extras-tests
+  Default-Language: Haskell2010
+  type: exitcode-stdio-1.0
+  Hs-Source-Dirs: .
+  Main-Is: Tests.hs
+  Build-Depends: base, HUnit, process-extras

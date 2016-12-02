@@ -9,7 +9,8 @@
 module System.Process.Common
     ( ProcessMaker(process, showProcessMakerForUser)
     , ListLikeProcessIO(forceOutput, readChunks)
-    , ProcessOutput(pidf, outf, errf, intf, codef)
+    , ProcessText
+    , ProcessResult(pidf, outf, errf, intf, codef)
     , readProcessWithExitCode
     , readCreateProcessWithExitCode
     , readCreateProcessStrict
@@ -21,9 +22,10 @@ module System.Process.Common
 import Control.Concurrent
 import Control.Exception as E (SomeException, onException, catch, mask, throw)
 import Control.Monad
-import Data.ListLike as ListLike (null)
+import Data.ListLike as ListLike (ListLike, null)
 import Data.ListLike.IO (ListLikeIO, hGetContents, hPutStr)
 import Data.Monoid ((<>))
+import Data.String (IsString)
 import Generics.Deriving.Instances ()
 import GHC.IO.Exception (IOErrorType(ResourceVanished), IOException(ioe_type))
 import Prelude hiding (null)
@@ -69,14 +71,16 @@ instance ProcessMaker (CreateProcess, BufferMode, BufferMode) where
     showProcessMakerForUser (p, outmode, errmode) =
         showCreateProcessForUser p ++ " outmode=" ++ show outmode ++ ", errmode=" ++ show errmode
 
-class Monoid b => ProcessOutput a b | b -> a where
-    pidf :: ProcessHandle -> b
-    outf :: a -> b
-    errf :: a -> b
-    intf :: SomeException -> b
-    codef :: ExitCode -> b
+class (IsString text, Monoid text, ListLike text char) => ProcessText text char
 
-instance ListLikeProcessIO a c => ProcessOutput a (ExitCode, a, a) where
+class Monoid result => ProcessResult text result | result -> text where
+    pidf :: ProcessHandle -> result
+    outf :: text -> result
+    errf :: text -> result
+    intf :: SomeException -> result
+    codef :: ExitCode -> result
+
+instance ListLikeProcessIO text char => ProcessResult text (ExitCode, text, text) where
     pidf _ = mempty
     codef c = (c, mempty, mempty)
     outf x = (mempty, x, mempty)
@@ -92,9 +96,9 @@ instance Monoid ExitCode where
 
 -- | Process IO is based on the 'ListLikeIO' class from the ListLike
 -- package
-class ListLikeIO a c => ListLikeProcessIO a c where
-    forceOutput :: a -> IO a
-    readChunks :: Handle -> IO [a]
+class ListLikeIO text char => ListLikeProcessIO text char where
+    forceOutput :: text -> IO text
+    readChunks :: Handle -> IO [text]
     -- ^ Read from a handle, returning a lazy list of the monoid a.
 
 -- | Like 'System.Process.readProcessWithExitCode', but with
@@ -104,21 +108,22 @@ class ListLikeIO a c => ListLikeProcessIO a c where
 -- are received, as well as the exit code.  Utilities to handle Chunks
 -- are provided in System.Process.ListLike.
 readProcessWithExitCode
-    :: ListLikeProcessIO a c =>
+    :: ListLikeProcessIO text char =>
        FilePath                 -- ^ command to run
     -> [String]                 -- ^ any arguments
-    -> a               -- ^ standard input
-    -> IO (ExitCode, a, a) -- ^ exitcode, stdout, stderr
+    -> text               -- ^ standard input
+    -> IO (ExitCode, text, text) -- ^ exitcode, stdout, stderr
 readProcessWithExitCode cmd args input = readCreateProcessWithExitCode (proc cmd args) input
 
 readCreateProcessWithExitCode
-    :: (ProcessMaker maker, ListLikeProcessIO a c) =>
-       maker               -- ^ command and arguments to run
-    -> a                   -- ^ standard input
-    -> IO (ExitCode, a, a) -- ^ exitcode, stdout, stderr
+    :: (ProcessMaker maker, ListLikeProcessIO text char) =>
+       maker                     -- ^ command and arguments to run
+    -> text                      -- ^ standard input
+    -> IO (ExitCode, text, text) -- ^ exitcode, stdout, stderr
 readCreateProcessWithExitCode = readCreateProcessStrict
 
-readCreateProcessStrict :: (ProcessMaker maker, ProcessOutput a b, ListLikeProcessIO a c) => maker -> a -> IO b
+readCreateProcessStrict :: (ProcessMaker maker, ProcessResult text result, ListLikeProcessIO text char) =>
+                           maker -> text -> IO result
 readCreateProcessStrict maker input = mask $ \restore -> do
     (inh, outh, errh, pid) <- process maker
     flip onException
@@ -147,7 +152,7 @@ readCreateProcessStrict maker input = mask $ \restore -> do
       return $ out <> err <> ex
 
 -- | Like readCreateProcessStrict, but the output is read lazily.
-readCreateProcessLazy :: (ProcessMaker maker, ProcessOutput a b, ListLikeProcessIO a c) => maker -> a -> IO b
+readCreateProcessLazy :: (ProcessMaker maker, ProcessResult a b, ListLikeProcessIO a c) => maker -> a -> IO b
 readCreateProcessLazy maker input = mask $ \restore -> do
     (inh, outh, errh, pid) <- process maker
     onException
@@ -163,11 +168,11 @@ readCreateProcessLazy maker input = mask $ \restore -> do
           waitForProcess pid)
 
 -- | Helper function for readCreateProcessLazy.
-readInterleaved :: (ListLikeProcessIO a c, ProcessOutput a b) =>
+readInterleaved :: (ListLikeProcessIO a c, ProcessResult a b) =>
                    [(a -> b, Handle)] -> IO b -> IO b
 readInterleaved pairs finish = newEmptyMVar >>= readInterleaved' pairs finish
 
-readInterleaved' :: forall a b c. (ListLikeProcessIO a c, ProcessOutput a b) =>
+readInterleaved' :: forall a b c. (ListLikeProcessIO a c, ProcessResult a b) =>
                     [(a -> b, Handle)] -> IO b -> MVar (Either Handle b) -> IO b
 readInterleaved' pairs finish res = do
   mapM_ (forkIO . uncurry readHandle) pairs

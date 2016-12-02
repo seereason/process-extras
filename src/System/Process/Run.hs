@@ -4,21 +4,38 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module System.Process.Run
-    ( OutputStyle(..)
+    ( 
+    -- * Monad transformer
+      RunT
+    , runT
     , RunState(..)
-    , run
+    , OutputStyle(..)
+    -- * Monad class
+    , RunM
+    -- * Modify moand RunM state parameters
     , echoStart
     , echoEnd
     , output
     , silent
     , dots
     , indent
+    , vlevel
+    , quieter
+    , noisier
+    , lazy
+    , strict
+    , message
+    -- * Monadic process runner
+    , run
+    -- * Re-exports
+    , module System.Process.ListLike
     ) where
 
 #if __GLASGOW_HASKELL__ <= 709
@@ -27,26 +44,52 @@ import Data.Monoid (Monoid, mempty)
 import Control.Monad (when)
 import Control.Monad.State (evalState, evalStateT, get, modify, MonadState, put, StateT)
 import Control.Monad.Trans (MonadIO, lift, liftIO)
+import Data.ByteString (ByteString)
+import qualified Data.ByteString.Lazy as Lazy (ByteString)
+import Data.Char (ord)
 import Data.Default (Default(def))
 import Data.ListLike as ListLike (break, fromList, head, hPutStr, length, ListLike, ListLikeIO,
                                   null, putStr, singleton, tail)
 import Data.Monoid ((<>))
 import Data.String (IsString, fromString)
-import System.Exit (ExitCode(..))
+import Data.Text (Text)
+import Data.Word (Word8)
+import qualified Data.Text.Lazy as Lazy (Text)
 import System.IO (hPutStr, hPutStrLn, stderr)
 import System.Process.ListLike
-    (Chunk(..), ProcessMaker, ProcessOutput, ListLikeProcessIO, collectOutput, proc, readCreateProcessLazy,
-     showProcessMakerForUser, writeChunk, writeOutput)
 
 -- | This is the state record that controls the output style.
-data RunState t
+data RunState text
     = RunState
       { _output :: OutputStyle -- ^ Overall style of output
-      , _outprefix :: t        -- ^ Prefix for lines of stdout
-      , _errprefix :: t        -- ^ Prefix for lines of stderr
+      , _outprefix :: text     -- ^ Prefix for lines of stdout
+      , _errprefix :: text     -- ^ Prefix for lines of stderr
       , _echoStart :: Bool     -- ^ Echo command as process starts
       , _echoEnd :: Bool       -- ^ Echo command as process finishes
+      , _verbosity :: Int      -- ^ A progression of progress modes
+      , _lazy :: Bool          -- ^ Use the lazy or strict runner?
+      , _message :: text       -- ^ Extra text for start/end message - e.g. the change root
       }
+
+type RunT text m = StateT (RunState text) m
+
+class (MonadState (RunState text) m,
+       ProcessText text char,
+       ListLikeProcessIO text char,
+       MonadIO m, IsString text, Eq char, Dot char) =>
+    RunM text char m
+
+instance Dot Word8 where
+    dot = fromIntegral (ord '.')
+
+instance (MonadIO m, MonadState (RunState String) m) => RunM String Char m
+instance (MonadIO m, MonadState (RunState Text) m) => RunM Text Char m
+instance (MonadIO m, MonadState (RunState Lazy.Text) m) => RunM Lazy.Text Char m
+instance (MonadIO m, MonadState (RunState ByteString) m) => RunM ByteString Word8 m
+instance (MonadIO m, MonadState (RunState Lazy.ByteString) m) => RunM Lazy.ByteString Word8 m
+
+runT :: forall m text char a. (MonadIO m, ProcessText text char) => RunT text m a -> m a
+runT action = evalStateT action (def :: RunState text)
 
 data OutputStyle
     = Dots Int  -- ^ Output one dot per n output characters
@@ -54,12 +97,15 @@ data OutputStyle
     | Indented  -- ^ Output with prefixes
     | Silent    -- ^ No output
 
-instance Monoid t => Default (RunState t) where
-    def = RunState { _outprefix = mempty
-                   , _errprefix = mempty
+instance ProcessText text char => Default (RunState text) where
+    def = RunState { _outprefix = fromString "1> "
+                   , _errprefix = fromString "2> "
                    , _output = All
-                   , _echoStart = False
-                   , _echoEnd = False }
+                   , _echoStart = True
+                   , _echoEnd = True
+                   , _verbosity = 3
+                   , _lazy = False
+                   , _message = mempty }
 
 {-
 class (Monoid text, MonadIO m) => MonadRun m text where
@@ -76,6 +122,9 @@ instance (MonadIO m, Monoid t, MonadState (RunState t) m) => MonadRun m t where
     putRunState = put
 -}
 
+noEcho :: (MonadIO m, MonadState (RunState t) m) => m ()
+noEcho = modify (\x -> x { _echoStart = False, _echoEnd = False })
+
 echoStart :: (MonadIO m, MonadState (RunState t) m) => m ()
 echoStart = modify (\x -> x { _echoStart = True })
 
@@ -91,7 +140,9 @@ silent = modify (\x -> x { _output = Silent })
 dots :: (MonadIO m, MonadState (RunState t) m) => Int -> m ()
 dots n = modify (\x -> x { _output = Dots n })
 
-indent :: (MonadIO m, MonadState (RunState t) m, ListLike t item) => (t -> t) -> (t -> t) -> m ()
+-- | Modify the indentation prefixes for stdout and stderr in the
+-- progress monad.
+indent :: (MonadIO m, MonadState (RunState t) m, ListLike t char) => (t -> t) -> (t -> t) -> m ()
 indent so se = modify $ \x ->
     let so' = so (_outprefix x)
         se' = se (_errprefix x) in
@@ -100,6 +151,40 @@ indent so se = modify $ \x ->
       , _output = if ListLike.null so' &&
                      ListLike.null se' then _output x else Indented }
 
+noIndent :: (MonadIO m, MonadState (RunState text) m, ListLike text char) => m ()
+noIndent = indent (const mempty) (const mempty)
+
+-- | Set verbosity to a specific level from 0 to 3.
+-- vlevel :: (MonadIO m, Monoid text, MonadState (RunState text) m) => Int -> m ()
+-- vlevel :: forall m text char. (IsString text, ListLike text char, MonadIO m) => Int -> m ()
+vlevel :: forall m text char.
+          (IsString text, ListLike text char, MonadIO m, MonadState (RunState text) m) =>
+          Int -> m ()
+vlevel n = do
+  modify (\x -> x {_verbosity = n})
+  case n of
+    _ | n <= 0 -> noEcho >> silent >> noIndent -- No output
+    1 -> vlevel 0 >> echoStart                 -- Output command at start
+    2 -> vlevel 1 >> echoEnd >> dots 100       -- Output command at start and end, dots to show output
+    _ ->                                       -- echo command at start and end, and send all output
+                                               -- to the console with channel prefixes 1> and 2>
+          vlevel 2 >> output >> indent (const (fromString "1> ")) (const (fromString ("2> ")))
+
+quieter :: RunM text char m => m ()
+quieter = get >>= \x -> vlevel (_verbosity x - 1)
+
+noisier :: RunM text char m => m ()
+noisier = get >>= \x -> vlevel (_verbosity x + 1)
+
+strict :: RunM text char m => m ()
+strict = modify (\x -> x { _lazy = False })
+
+lazy :: RunM text char m => m ()
+lazy = modify (\x -> x { _lazy = True})
+
+message :: RunM text char m => (text -> text) -> m ()
+message f = modify (\x -> x { _message = f (_message x) })
+
 class Dot c where
     dot :: c
 
@@ -107,15 +192,13 @@ instance Dot Char where
     dot = '.'
 
 run' :: forall m maker text char.
-        (MonadIO m, Monoid text, IsString text, Dot char, Eq char,
-         MonadState (RunState text) m,
-         ProcessMaker maker,
-         ListLikeProcessIO text char) =>
+        (RunM text char m,
+         ProcessMaker maker) =>
         maker -> text -> m [Chunk text]
 run' maker input = do
   st0 <- get
   when (_echoStart st0) (liftIO $ hPutStrLn stderr ("-> " ++ showProcessMakerForUser maker))
-  result <- liftIO $ readCreateProcessLazy maker input >>= doOutput st0
+  result <- liftIO $ (if _lazy st0 then readCreateProcessLazy else readCreateProcess) maker input >>= doOutput st0
   when (_echoEnd st0) (liftIO $ hPutStrLn stderr ("<- " ++ showProcessMakerForUser maker))
   return result
     where
@@ -126,17 +209,15 @@ run' maker input = do
       doOutput (RunState {_output = Indented, _outprefix = outp, _errprefix = errp}) cs = writeOutputIndented outp errp cs
 
 run :: forall m maker text char result.
-       (MonadIO m, IsString text, Dot char, Eq char,
-        MonadState (RunState text) m,
+       (RunM text char m,
         ProcessMaker maker,
-        ProcessOutput text result,
-        ListLikeProcessIO text char) =>
+        ProcessResult text result) =>
        maker -> text -> m result
 run maker input = run' maker input >>= return . collectOutput
 
 -- | Output the dotified text of a chunk list with a newline at EOF.
 -- Returns the original list.
-putDotsLn :: forall text char. (ListLikeProcessIO text char, IsString text, Dot char) =>
+putDotsLn :: (ListLikeProcessIO text char, IsString text, Dot char) =>
              Int -> [Chunk text] -> IO [Chunk text]
 putDotsLn cpd chunks = putDots cpd chunks >>= \ r -> System.IO.hPutStr stderr "\n" >> return r
 
@@ -150,7 +231,7 @@ putDots charsPerDot chunks =
 -- characters in the Stdout and Stderr chunks with one dot.  Runs in
 -- the state monad to keep track of how many characters had been seen
 -- when the previous chunk finished.  chunks.
-dotifyChunk :: forall text char m. (Monad m, Functor m, ListLikeProcessIO text char, Dot char) =>
+dotifyChunk :: forall text char m. (Monad m, ListLike text char, Dot char) =>
                Int -> Chunk text -> StateT Int m [Chunk text]
 dotifyChunk charsPerDot chunk =
     case chunk of
@@ -221,18 +302,3 @@ indentChunk nl outp errp chunk =
         put BOL
         tl <- doText con pre (ListLike.tail x)
         return $ (if bol == BOL then [con pre] else []) <> [con (singleton nl)] <> tl
-
-_test1 :: IO [Chunk String]
-_test1 = evalStateT (run (proc "ls" []) "") def
-_test2 :: IO [Chunk String]
-_test2 = evalStateT (silent >> run (proc "ls" []) "") def
-_test2a :: IO (ExitCode, String, String)
-_test2a = evalStateT (silent >> run (proc "ls" []) "") def
-_test3 :: IO [Chunk String]
-_test3 = evalStateT (dots 10 >> run (proc "ls" []) "") def
-_test4 :: IO [Chunk String]
-_test4 = evalStateT (indent (<> "1> ") (<> "2> ") >> run (proc "ls" []) "") def
-_test5 :: IO [Chunk String]
-_test5 = evalStateT (echoStart >> echoEnd >> run (proc "ls" []) "") def
-_test6 :: IO [Chunk String]
-_test6 = (evalStateT (silent >> echoStart >> echoEnd >> run (proc "yes" []) "") def :: IO [Chunk String]) >>= return . take 2

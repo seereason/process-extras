@@ -13,6 +13,8 @@ import System.Process
 import System.Process.Common
 import System.Exit (ExitCode)
 
+instance ProcessText Text Char
+
 -- | Like 'System.Process.readProcessWithExitCode', but using 'Text'
 instance ListLikeProcessIO Text Char where
     forceOutput = return

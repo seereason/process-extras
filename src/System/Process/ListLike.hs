@@ -11,7 +11,8 @@ module System.Process.ListLike
     (
     -- * Classes for process IO monad, output type, and creation type
       ListLikeProcessIO(forceOutput)
-    , ProcessOutput(pidf, outf, errf, codef, intf)
+    , ProcessText
+    , ProcessResult(pidf, outf, errf, codef, intf)
     , ProcessMaker(process, showProcessMakerForUser)
 
     -- * The generalized process runners
@@ -56,13 +57,15 @@ import System.Process.ByteString ()
 import System.Process.ByteString.Lazy ()
 import System.Process.Common
     (ProcessMaker(process, showProcessMakerForUser), ListLikeProcessIO(forceOutput, readChunks),
-     ProcessOutput(pidf, outf, errf, codef, intf), readCreateProcessStrict, readCreateProcessLazy,
+     ProcessText, ProcessResult(pidf, outf, errf, codef, intf), readCreateProcessStrict, readCreateProcessLazy,
      readCreateProcessWithExitCode, readProcessWithExitCode, showCmdSpecForUser, showCreateProcessForUser)
 import System.Process.Text ()
 import System.Process.Text.Builder ()
 import System.Process.Text.Lazy ()
 
-readCreateProcess :: (ProcessMaker maker, ProcessOutput text result, ListLikeProcessIO text char) => maker -> text -> IO result
+instance ProcessText String Char
+
+readCreateProcess :: (ProcessMaker maker, ProcessResult text result, ListLikeProcessIO text char) => maker -> text -> IO result
 readCreateProcess = readCreateProcessLazy
 
 -- | Like 'System.Process.readProcessWithExitCode' that takes a 'CreateProcess'.
@@ -93,14 +96,14 @@ data Chunk a
 instance Show ProcessHandle where
     show _ = "<process>"
 
-instance ListLikeProcessIO a c => ProcessOutput a [Chunk a] where
+instance ListLikeProcessIO a c => ProcessResult a [Chunk a] where
     pidf p = [ProcessHandle p]
     outf x = [Stdout x]
     errf x = [Stderr x]
     intf e = throw e
     codef c = [Result c]
 
-instance ListLikeProcessIO a c => ProcessOutput a (ExitCode, [Chunk a]) where
+instance ListLikeProcessIO a c => ProcessResult a (ExitCode, [Chunk a]) where
     pidf p = (mempty, [ProcessHandle p])
     codef c = (c, mempty)
     outf x = (mempty, [Stdout x])
@@ -123,7 +126,7 @@ foldOutput _ _ _ _ r (Result x) = r x
 -- | Turn a @[Chunk a]@ into any other instance of 'ProcessOutput'.  I
 -- usually use this after processing the chunk list to turn it into
 -- the (ExitCode, String, String) type returned by readProcessWithExitCode.
-collectOutput :: ProcessOutput a b => [Chunk a] -> b
+collectOutput :: ProcessResult a b => [Chunk a] -> b
 collectOutput xs = mconcat $ map (foldOutput pidf outf errf intf codef) xs
 
 -- | Send Stdout chunks to stdout and Stderr chunks to stderr.

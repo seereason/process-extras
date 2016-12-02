@@ -15,7 +15,7 @@ import System.Process
 import System.Process.Common
 import System.Exit (ExitCode)
 
--- | Like 'System.Process.readProcessWithExitCode', but using 'Text'
+-- | Like 'System.Process.readProcessWithExitCode', but specialized for 'Text'
 instance ListLikeProcessIO Chars Char where
     forceOutput = C.evaluate . force
     readChunks h = (map (T . fromStrict) . toChunks) <$> hGetContents h

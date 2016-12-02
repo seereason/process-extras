@@ -21,6 +21,8 @@ import Control.DeepSeq (NFData)
 instance NFData ByteString
 #endif
 
+instance ProcessText ByteString Word8
+
 -- | Like 'System.Process.readProcessWithExitCode', but using 'ByteString'
 instance ListLikeProcessIO ByteString Word8 where
     forceOutput = C.evaluate . force
