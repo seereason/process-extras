@@ -1,3 +1,15 @@
+haskell-process-extras (0.7.1) unstable; urgency=low
+
+  * Add System.Process.Run, utilities and a monad for process progress
+    output.
+  * Rename ProcessOutput -> ProcessResult
+  * Add a ProcessText class to characterize the type written to
+    standard input and read from standard output and error.
+  * Add an alias for readCreateProcess named readCreateProcessStrict
+  * Update README.md
+
+ -- David Fox <dsf@foxthompson.net>  Mon, 05 Dec 2016 10:52:20 -0800
+
 haskell-process-extras (0.5) unstable; urgency=low
 
   * Have writeOutput return the input list rather than ()

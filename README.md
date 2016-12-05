@@ -25,13 +25,13 @@ the result, or by specifying the module containing the specialized
 function:
 
     > :m +System.Process.ListLike Data.ByteString Data.Text.Lazy
-    > readCreateProcessWithExitCode (shell "echo 'λ'") mempty :: IO (ExitCode, ByteString, ByteString)
+    > readCreateProcess (shell "echo 'λ'") mempty :: IO (ExitCode, ByteString, ByteString)
     (ExitSuccess,"\206\187\n","")
-    > readCreateProcessWithExitCode (shell "echo 'λ'") mempty :: IO (ExitCode, Text, Text)
+    > readCreateProcess (shell "echo 'λ'") mempty :: IO (ExitCode, Text, Text)
     (ExitSuccess,"\955\n","")
-    > readCreateProcessWithExitCode (shell "echo 'λ'") mempty :: IO (ExitCode, String, String)
+    > readCreateProcess (shell "echo 'λ'") mempty :: IO (ExitCode, String, String)
     (ExitSuccess,"\955\n","")
-    > System.Process.Text.readCreateProcessWithExitCode (shell "yes | head -10") mempty
+    > readCreateProcess (shell "yes | head -10") mempty :: IO (ExitCode, Text, Text)
     (ExitSuccess,"y\ny\ny\ny\ny\ny\ny\ny\ny\ny\n","")
 
 Although the output *type* can be lazy, normal process functions still
@@ -50,7 +50,7 @@ types (ExitCode, a, a), [Chunk a], and (ExitCode, [Chunk a]) are
 provided.  [Chunk a] can be converted to any other instance of
 ProcessOutput using collectOutput
 
-    > (readCreateProcess (shell "gzip -v < /proc/uptime") mempty :: IO [Chunk ByteString]) >>= mapM_ (putStrLn . show)
+    > (readCreateProcess (shell "gzip -v < /proc/uptime") mempty :: IO [Chunk ByteString]) >>= mapM_ (Prelude.putStrLn . show)
     Stdout "\US\139\b\NUL\237\136\&7W\NUL\ETX345\183\&403\215\&31Q04267\177\&0\177\212\&33\225\STX\NUL_\169\142\178\ETB\NUL\NUL\NUL"
     Stderr "gzip: stdin: file size changed while zipping\n -8.7%\n"
     Result ExitSuccess
@@ -60,7 +60,7 @@ ProcessOutput using collectOutput
     (ExitSuccess,"\US\139\b\NUL\185\137\&7W\NUL\ETX345\183\&427\212\&33W0426731\177\208\&35\225\STX\NUL\237\192\CAN\224\ETB\NUL\NUL\NUL","gzip: stdin: file size changed while zipping\n -8.7%\n")
     > collectOutput <$> (readCreateProcess (shell "gzip -v < /proc/uptime") mempty :: IO [Chunk ByteString]) :: IO (ExitCode, ByteString, ByteString)
     (ExitSuccess,"\US\139\b\NUL\185\137\&7W\NUL\ETX345\183\&427\212\&33W0426731\177\208\&35\225\STX\NUL\237\192\CAN\224\ETB\NUL\NUL\NUL","gzip: stdin: file size changed while zipping\n -8.7%\n")
-    > (collectOutput . filter (\x -> case x of Stderr _ -> False; _ -> True)) <$> (readCreateProcess (shell "gzip -v < /proc/uptime") mempty :: IO [Chunk ByteString]) :: IO (ExitCode, ByteString, ByteString)
+    > (collectOutput . Prelude.filter (\x -> case x of Stderr _ -> False; _ -> True)) <$> (readCreateProcess (shell "gzip -v < /proc/uptime") mempty :: IO [Chunk ByteString]) :: IO (ExitCode, ByteString, ByteString)
     (ExitSuccess,"\US\139\b\NUL<\138\&7W\NUL\ETX345\183\&410\210\&3\176P04267713\213\&37\224\STX\NULT\142\EOT\165\ETB\NUL\NUL\NUL","")
 
 Some cases that need investigation:

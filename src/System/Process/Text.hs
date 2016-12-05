@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, MultiParamTypeClasses #-}
+{-# LANGUAGE CPP, FlexibleContexts, MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module System.Process.Text where
 

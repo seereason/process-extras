@@ -1,5 +1,7 @@
 :set -isrc
+:set -XFlexibleContexts
 :set -DMIN_VERSION_deepseq(a,b,c)=1
 :set -DMIN_VERSION_bytestring(a,b,c)=1
+:set -DMIN_VERSION_base(a,b,c)=1
 :load Tests
 
