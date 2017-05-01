@@ -37,7 +37,7 @@ dir :: FilePath
 dir = "/usr/share/doc/cron"
 
 cmd :: CreateProcess
-cmd = shell "echo a; echo b 1>&2; echo -n c"
+cmd = shell "echo a; echo b 1>&2; printf c"
 
 omitProcessHandle :: [Chunk a] -> [Chunk a]
 omitProcessHandle [] = []
