@@ -94,6 +94,11 @@ instance Monoid ExitCode where
     mappend x (ExitFailure 0) = x
     mappend _ x = x
 
+#if MIN_VERSION_base(4,11,0)
+instance Semigroup ExitCode where
+  (<>) = mappend
+#endif
+
 -- | Process IO is based on the 'ListLikeIO' class from the ListLike
 -- package
 class ListLikeIO text char => ListLikeProcessIO text char where
