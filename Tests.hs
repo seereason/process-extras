@@ -4,7 +4,9 @@
 import Control.Applicative ((<$>))
 #endif
 import System.Exit (ExitCode(..), exitWith)
-import System.Process.Run
+import System.Process.Run (Chunk(ProcessHandle, Result, Stdout, Stderr), CreateProcess,
+                           collectOutput, dots, echoStart, echoEnd, indent, lazy, output,
+                           proc, run, runT, shell, silent, vlevel)
 import System.Process.ByteString ()
 import System.Process.ByteString.Lazy ()
 import System.Process.Text ()
