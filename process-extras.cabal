@@ -15,8 +15,23 @@ Category:           System
 Build-type:         Simple
 Cabal-version:      >=1.10
 Extra-source-files:
-  README.md, .travis.yml, .ghci, changelog
-Tested-With:        GHC == 7.4.2, GHC == 7.6.3, GHC == 7.8.4, GHC == 7.10.3, GHC >= 8
+  README.md
+  changelog
+
+
+tested-with:
+  GHC == 9.10.1
+  GHC == 9.8.2
+  GHC == 9.6.6
+  GHC == 9.4.8
+  GHC == 9.2.8
+  GHC == 9.0.2
+  GHC == 8.10.7
+  GHC == 8.8.4
+  GHC == 8.6.5
+  GHC == 8.4.4
+  GHC == 8.2.2
+  GHC == 8.0.2
 
 source-repository head
   Type:             git
@@ -48,7 +63,7 @@ Library
     ListLike >= 4.4,
     mtl,
     process,
-    bytestring,
+    bytestring >= 0.10.0.0,
     text,
     deepseq >= 1.1,
     generic-deriving >= 1.10
