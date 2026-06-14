@@ -91,12 +91,15 @@ instance ListLikeProcessIO text char => ProcessResult text (ExitCode, text, text
 -- instance lets us build the type returned by 'System.Process.readProcessWithExitCode'.
 instance Monoid ExitCode where
     mempty = ExitFailure 0
+#if !MIN_VERSION_base(4,11,0)
     mappend x (ExitFailure 0) = x
     mappend _ x = x
+#endif
 
 #if MIN_VERSION_base(4,11,0)
 instance Semigroup ExitCode where
-  (<>) = mappend
+    (<>) x (ExitFailure 0) = x
+    (<>) _ x = x
 #endif
 
 -- | Process IO is based on the 'ListLikeIO' class from the ListLike
